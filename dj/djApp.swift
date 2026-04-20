@@ -16,6 +16,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var serverProcess: Process?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
         startStemServer()
     }
 
@@ -33,7 +35,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3")
+        process.executableURL = URL(fileURLWithPath: "/Users/shawnpana/Projects/lab/dj/.venv/bin/python3")
         process.arguments = [path]
         process.environment = ProcessInfo.processInfo.environment
         process.standardOutput = FileHandle.nullDevice
