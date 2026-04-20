@@ -1,6 +1,40 @@
 import SwiftUI
 import AppKit
 
+/// Invisible overlay that forwards right-clicks to a callback while letting
+/// all other mouse events pass through to SwiftUI underneath.
+private struct RightClickCatcher: NSViewRepresentable {
+    let onRightClick: () -> Void
+
+    func makeNSView(context: Context) -> RightClickNSView {
+        let v = RightClickNSView()
+        v.onRightClick = onRightClick
+        return v
+    }
+    func updateNSView(_ view: RightClickNSView, context: Context) {
+        view.onRightClick = onRightClick
+    }
+}
+
+private final class RightClickNSView: NSView {
+    var onRightClick: (() -> Void)?
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        // Only claim the hit for right-click events; pass everything else through.
+        guard let event = NSApp.currentEvent else { return nil }
+        switch event.type {
+        case .rightMouseDown, .rightMouseUp, .rightMouseDragged:
+            return super.hitTest(point)
+        default:
+            return nil
+        }
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+        onRightClick?()
+    }
+}
+
 struct ClipView: View {
     let clip: Clip
     let currentTime: TimeInterval
@@ -10,6 +44,8 @@ struct ClipView: View {
     let onMoveBy: (TimeInterval) -> Void
     let onSetLoop: (TimeInterval, TimeInterval) -> Void
     let onSetAnchor: (TimeInterval) -> Void
+    let onSeekLocal: (TimeInterval) -> Void
+    let onToggleClipMute: () -> Void
     let onVolumeChange: (String, Float) -> Void
     let onMuteToggle: (String) -> Void
     let onSoloToggle: (String) -> Void
@@ -19,6 +55,8 @@ struct ClipView: View {
     @State private var isLoopDrag: Bool = false
     @State private var loopDragStartX: CGFloat?
     @State private var loopDragCurrentX: CGFloat?
+
+    @Environment(\.uiScale) private var uiScale
 
     var body: some View {
         let stemVolumes = effectiveVolumes()
@@ -38,41 +76,43 @@ struct ClipView: View {
                 stemVolumes: stemVolumes,
                 isUsingStemPlayback: isStemMix
             )
-            .padding(.top, 14)
-            .padding(.horizontal, 2)
-            .padding(.bottom, 2)
+            .padding(.top, 14 * uiScale)
+            .padding(.horizontal, 2 * uiScale)
+            .padding(.bottom, 2 * uiScale)
 
             beatTicksOverlay
-                .padding(.top, 14)
-                .padding(.horizontal, 2)
-                .padding(.bottom, 2)
+                .padding(.top, 14 * uiScale)
+                .padding(.horizontal, 2 * uiScale)
+                .padding(.bottom, 2 * uiScale)
 
             loopOverlay
-                .padding(.horizontal, 2)
+                .padding(.horizontal, 2 * uiScale)
 
             playheadOverlay
-                .padding(.horizontal, 2)
+                .padding(.horizontal, 2 * uiScale)
 
             separationOverlay
 
-            HStack(spacing: 4) {
+            HStack(spacing: 4 * uiScale) {
                 Text(clip.name)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 10 * uiScale, weight: .semibold))
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .foregroundStyle(.white.opacity(0.9))
                 separationBadge
             }
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
+            .padding(.horizontal, 5 * uiScale)
+            .padding(.vertical, 1 * uiScale)
             .background(accent.opacity(0.75), in: RoundedRectangle(cornerRadius: 2))
-            .padding(3)
+            .padding(3 * uiScale)
         }
         .offset(x: dragDelta)
         .contentShape(Rectangle())
+        .overlay(RightClickCatcher(onRightClick: { showingPopover = true }))
         .popover(isPresented: $showingPopover, arrowEdge: .bottom) {
             StemPopoverView(
                 clip: clip,
+                onToggleClipMute: onToggleClipMute,
                 onVolumeChange: onVolumeChange,
                 onMuteToggle: onMuteToggle,
                 onSoloToggle: onSoloToggle
@@ -83,7 +123,7 @@ struct ClipView: View {
                 .onChanged { value in
                     let dx = abs(value.translation.width)
                     let dy = abs(value.translation.height)
-                    guard dx > 4 || dy > 4 else { return }  // still a potential click
+                    guard dx > 4 || dy > 4 else { return }
                     if loopDragStartX == nil && !isLoopDrag && NSEvent.modifierFlags.contains(.shift) {
                         isLoopDrag = true
                         loopDragStartX = value.startLocation.x
@@ -107,10 +147,11 @@ struct ClipView: View {
 
                     if isClick {
                         let local = Double(value.location.x - 2) / pixelsPerSecond
+                        let clamped = max(0, min(clip.duration, local))
                         if NSEvent.modifierFlags.contains(.option) {
-                            onSetAnchor(max(0, min(clip.duration, local)))
+                            onSetAnchor(clamped)
                         } else {
-                            showingPopover = true
+                            onSeekLocal(clamped)
                         }
                         return
                     }
@@ -252,15 +293,15 @@ struct ClipView: View {
         switch clip.separation {
         case .processing(let done, let total) where total > 0:
             Text("\(done)/\(total)")
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(.system(size: 9 * uiScale, weight: .bold, design: .monospaced))
                 .foregroundStyle(.orange)
         case .preparing:
             Text("prep")
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(.system(size: 9 * uiScale, weight: .bold, design: .monospaced))
                 .foregroundStyle(.orange)
         case .error:
             Text("!")
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(.system(size: 9 * uiScale, weight: .bold, design: .monospaced))
                 .foregroundStyle(.red)
         default:
             EmptyView()

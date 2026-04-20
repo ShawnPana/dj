@@ -7,6 +7,7 @@ struct ArrangementView: View {
 
     @State private var pixelsPerSecond: Double = 20
     @State private var zoomBase: Double?
+    @Environment(\.uiScale) private var uiScale
 
     private static let minPPS: Double = 4
     private static let maxPPS: Double = 400
@@ -34,19 +35,19 @@ struct ArrangementView: View {
     // MARK: - Transport
 
     private var transportBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 10 * uiScale) {
             Button(action: engine.togglePlayPause) {
                 Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 16))
-                    .frame(width: 30, height: 26)
+                    .font(.system(size: 16 * uiScale))
+                    .frame(width: 30 * uiScale, height: 26 * uiScale)
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.space, modifiers: [])
 
             Button(action: engine.stop) {
                 Image(systemName: "stop.fill")
-                    .font(.system(size: 12))
-                    .frame(width: 24, height: 22)
+                    .font(.system(size: 12 * uiScale))
+                    .frame(width: 24 * uiScale, height: 22 * uiScale)
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
@@ -58,27 +59,27 @@ struct ArrangementView: View {
             editLockButton
 
             Text(engine.editUnlocked
-                 ? "drag = move · shift+drag = loop · opt+click = anchor"
-                 : "shift+drag = loop · opt+click = anchor · unlock to move")
-                .font(.system(size: 10))
+                 ? "click = seek · right-click = menu · shift+drag = loop · opt+click = anchor · drag = move"
+                 : "click = seek · right-click = menu · shift+drag = loop · opt+click = anchor · unlock to move")
+                .font(.system(size: 10 * uiScale))
                 .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 12 * uiScale)
+        .padding(.vertical, 8 * uiScale)
     }
 
     private var editLockButton: some View {
         Button {
             engine.editUnlocked.toggle()
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 4 * uiScale) {
                 Image(systemName: engine.editUnlocked ? "lock.open.fill" : "lock.fill")
-                    .font(.system(size: 11))
+                    .font(.system(size: 11 * uiScale))
                 Text(engine.editUnlocked ? "EDIT" : "LOCKED")
-                    .font(.system(.caption2, design: .monospaced, weight: .bold))
+                    .font(.system(size: 10 * uiScale, weight: .bold, design: .monospaced))
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 8 * uiScale)
+            .padding(.vertical, 4 * uiScale)
             .background(
                 engine.editUnlocked ? Color.yellow.opacity(0.85) : Color.secondary.opacity(0.15),
                 in: RoundedRectangle(cornerRadius: 3)
@@ -89,7 +90,7 @@ struct ArrangementView: View {
     }
 
     private var timeReadout: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 2 * uiScale) {
             Text(formatTime(engine.currentTime))
                 .foregroundStyle(.white)
             Text("/")
@@ -97,7 +98,7 @@ struct ArrangementView: View {
             Text(formatTime(engine.duration))
                 .foregroundStyle(.secondary)
         }
-        .font(.system(.caption, design: .monospaced, weight: .medium))
+        .font(.system(size: 12 * uiScale, weight: .medium, design: .monospaced))
     }
 
     // MARK: - Arrangement
@@ -107,7 +108,8 @@ struct ArrangementView: View {
             // Left: fixed header column
             VStack(spacing: 0) {
                 Color.clear
-                    .frame(width: TrackLayout.headerWidth, height: TrackLayout.rulerHeight)
+                    .frame(width: TrackLayout.headerWidth(uiScale),
+                           height: TrackLayout.rulerHeight(uiScale))
                     .overlay(alignment: .trailing) { Divider().opacity(0.25) }
                     .overlay(alignment: .bottom) { Divider().opacity(0.25) }
 
@@ -146,6 +148,8 @@ struct ArrangementView: View {
                             onMove: { engine.moveClip(id: clip.id, to: $0) },
                             onSetLoop: { engine.setClipLoop(clipID: clip.id, start: $0, end: $1) },
                             onSetAnchor: { engine.setClipAnchor(clipID: clip.id, clipLocalTime: $0) },
+                            onSeekLocal: { engine.seek(to: clip.timelineStart + $0) },
+                            onToggleClipMute: { engine.toggleClipMute(clipID: clip.id) },
                             onVolumeChange: { engine.setVolume(clipID: clip.id, stemID: $0, volume: $1) },
                             onMuteToggle: { engine.toggleMute(clipID: clip.id, stemID: $0) },
                             onSoloToggle: { engine.toggleSolo(clipID: clip.id, stemID: $0) }
@@ -179,15 +183,16 @@ struct ArrangementView: View {
                 onAddFile(url)
             }
         } label: {
-            VStack(spacing: 2) {
+            VStack(spacing: 2 * uiScale) {
                 Image(systemName: "plus")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14 * uiScale, weight: .semibold))
                     .foregroundStyle(.secondary)
                 Text("add track")
-                    .font(.system(size: 9))
+                    .font(.system(size: 9 * uiScale))
                     .foregroundStyle(.tertiary)
             }
-            .frame(width: TrackLayout.headerWidth, height: TrackLayout.rowHeight)
+            .frame(width: TrackLayout.headerWidth(uiScale),
+                   height: TrackLayout.rowHeight(uiScale))
             .background(Color.white.opacity(0.02))
             .overlay(alignment: .trailing) { Divider().opacity(0.25) }
             .overlay(alignment: .bottom) { Divider().opacity(0.25) }
@@ -198,10 +203,10 @@ struct ArrangementView: View {
     private var addTrackLane: some View {
         Rectangle()
             .fill(Color.white.opacity(0.015))
-            .frame(width: timelineWidth, height: TrackLayout.rowHeight)
+            .frame(width: timelineWidth, height: TrackLayout.rowHeight(uiScale))
             .overlay(
                 Text("drop audio anywhere to add a track")
-                    .font(.system(size: 10))
+                    .font(.system(size: 10 * uiScale))
                     .foregroundStyle(.tertiary)
             )
             .overlay(alignment: .bottom) { Divider().opacity(0.15) }

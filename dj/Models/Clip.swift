@@ -66,6 +66,10 @@ struct Clip: Identifiable, Equatable {
     var waveform: WaveformData
     var beatGrid: BeatGrid?
 
+    /// Clip-level mute — silences all stems and the original for this clip,
+    /// without touching per-stem state. Applied after per-stem logic.
+    var isMuted: Bool = false
+
     /// Clip-local loop bounds in seconds. When `loopEnabled` is true and
     /// `loopEnd > loopStart`, the clip's audio wraps from `loopEnd` back to
     /// `loopStart` indefinitely. Independent per clip.

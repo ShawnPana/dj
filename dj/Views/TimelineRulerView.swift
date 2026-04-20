@@ -4,12 +4,14 @@ struct TimelineRulerView: View {
     let pixelsPerSecond: Double
     let rulerWidth: CGFloat
 
+    @Environment(\.uiScale) private var uiScale
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.white.opacity(0.05)
             ticksCanvas
         }
-        .frame(width: rulerWidth, height: TrackLayout.rulerHeight)
+        .frame(width: rulerWidth, height: TrackLayout.rulerHeight(uiScale))
     }
 
     private var ticksCanvas: some View {
@@ -32,7 +34,7 @@ struct TimelineRulerView: View {
 
                 if isLabel {
                     let txt = Text(formatTime(t))
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(.system(size: 9 * uiScale, design: .monospaced))
                         .foregroundColor(.white.opacity(0.65))
                     context.draw(txt, at: CGPoint(x: x + 3, y: 2), anchor: .topLeading)
                 }

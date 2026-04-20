@@ -2,17 +2,39 @@ import SwiftUI
 
 struct StemPopoverView: View {
     let clip: Clip
+    let onToggleClipMute: () -> Void
     let onVolumeChange: (String, Float) -> Void
     let onMuteToggle: (String) -> Void
     let onSoloToggle: (String) -> Void
 
+    @Environment(\.uiScale) private var uiScale
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(clip.name)
-                .font(.system(.caption, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+        VStack(alignment: .leading, spacing: 10 * uiScale) {
+            HStack(spacing: 8 * uiScale) {
+                Text(clip.name)
+                    .font(.system(size: 11 * uiScale, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer(minLength: 4 * uiScale)
+                Button(action: onToggleClipMute) {
+                    HStack(spacing: 3 * uiScale) {
+                        Image(systemName: clip.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                            .font(.system(size: 10 * uiScale))
+                        Text(clip.isMuted ? "MUTED" : "MUTE")
+                            .font(.system(size: 10 * uiScale, weight: .bold, design: .monospaced))
+                    }
+                    .padding(.horizontal, 8 * uiScale)
+                    .padding(.vertical, 3 * uiScale)
+                    .background(
+                        clip.isMuted ? Color.red.opacity(0.85) : Color.secondary.opacity(0.18),
+                        in: RoundedRectangle(cornerRadius: 3)
+                    )
+                    .foregroundStyle(clip.isMuted ? .white : .primary)
+                }
+                .buttonStyle(.plain)
+            }
 
             Divider()
 
@@ -21,18 +43,18 @@ struct StemPopoverView: View {
                 stemRow(stem: stem, state: state)
             }
         }
-        .padding(14)
-        .frame(width: 280)
+        .padding(14 * uiScale)
+        .frame(width: 300 * uiScale)
     }
 
     @ViewBuilder
     private func stemRow(stem: StemTrack, state: StemState) -> some View {
-        HStack(spacing: 8) {
-            Circle().fill(stem.color).frame(width: 8, height: 8)
+        HStack(spacing: 8 * uiScale) {
+            Circle().fill(stem.color).frame(width: 8 * uiScale, height: 8 * uiScale)
 
             Text(stem.name)
-                .font(.system(.caption, design: .rounded, weight: .semibold))
-                .frame(width: 52, alignment: .leading)
+                .font(.system(size: 11 * uiScale, weight: .semibold, design: .rounded))
+                .frame(width: 52 * uiScale, alignment: .leading)
                 .foregroundStyle(state.isMuted ? .secondary : .primary)
 
             Slider(
@@ -47,8 +69,8 @@ struct StemPopoverView: View {
 
             Button(action: { onMuteToggle(stem.id) }) {
                 Text("M")
-                    .font(.system(.caption2, design: .monospaced, weight: .bold))
-                    .frame(width: 22, height: 22)
+                    .font(.system(size: 10 * uiScale, weight: .bold, design: .monospaced))
+                    .frame(width: 22 * uiScale, height: 22 * uiScale)
                     .background(state.isMuted ? Color.red.opacity(0.8) : Color.secondary.opacity(0.15))
                     .foregroundStyle(state.isMuted ? .white : .primary)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
@@ -57,8 +79,8 @@ struct StemPopoverView: View {
 
             Button(action: { onSoloToggle(stem.id) }) {
                 Text("S")
-                    .font(.system(.caption2, design: .monospaced, weight: .bold))
-                    .frame(width: 22, height: 22)
+                    .font(.system(size: 10 * uiScale, weight: .bold, design: .monospaced))
+                    .frame(width: 22 * uiScale, height: 22 * uiScale)
                     .background(state.isSoloed ? Color.yellow.opacity(0.85) : Color.secondary.opacity(0.15))
                     .foregroundStyle(state.isSoloed ? .black : .primary)
                     .clipShape(RoundedRectangle(cornerRadius: 4))

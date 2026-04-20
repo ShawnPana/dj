@@ -4,19 +4,20 @@ import UniformTypeIdentifiers
 struct DropZoneView: View {
     let onDrop: (URL) -> Void
     @State private var isTargeted = false
+    @Environment(\.uiScale) private var uiScale
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 16 * uiScale) {
             Image(systemName: "waveform.badge.plus")
-                .font(.system(size: 48))
+                .font(.system(size: 48 * uiScale))
                 .foregroundStyle(.secondary)
 
             Text("Drop an audio file")
-                .font(.title2)
+                .font(.system(size: 20 * uiScale))
                 .foregroundStyle(.secondary)
 
             Text("mp3, wav, m4a, flac, aiff")
-                .font(.caption)
+                .font(.system(size: 11 * uiScale))
                 .foregroundStyle(.tertiary)
 
             Button("Browse...") {

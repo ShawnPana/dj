@@ -84,7 +84,10 @@ class ArrangementEngine: ObservableObject {
         let rt = ClipRuntime(format: format, originalPlayer: originalPlayer, originalBuffer: buffer, stemPlayers: stemPlayers)
         let waveSamples = generateWaveform(from: buffer)
         let id = UUID()
-        let clip = Clip(
+        // Auto-mute if any existing clip is currently audible, so adding a track
+        // doesn't suddenly crash a mix together.
+        let anyAudible = clips.contains { !$0.isMuted }
+        var clip = Clip(
             id: id,
             url: url,
             fileHash: fileHash,
@@ -95,6 +98,7 @@ class ArrangementEngine: ObservableObject {
             separation: .pending,
             waveform: WaveformData(samples: waveSamples, stemSamples: [:])
         )
+        clip.isMuted = anyAudible
         runtimes[id] = rt
         clips.append(clip)
         return id
@@ -529,13 +533,26 @@ class ArrangementEngine: ObservableObject {
         applyVolumes()
     }
 
+    func setClipMuted(clipID: UUID, muted: Bool) {
+        guard let idx = clips.firstIndex(where: { $0.id == clipID }) else { return }
+        guard clips[idx].isMuted != muted else { return }
+        clips[idx].isMuted = muted
+        applyVolumes()
+    }
+
+    func toggleClipMute(clipID: UUID) {
+        guard let idx = clips.firstIndex(where: { $0.id == clipID }) else { return }
+        setClipMuted(clipID: clipID, muted: !clips[idx].isMuted)
+    }
+
     private func applyVolumes() {
         var needsReschedule = false
         for clip in clips {
             guard let rt = runtimes[clip.id] else { continue }
             let tweaked = clip.anyTweaked
             let anySoloed = clip.anySoloed
-            rt.originalPlayer.volume = tweaked ? 0 : 1
+            let clipGain: Float = clip.isMuted ? 0 : 1
+            rt.originalPlayer.volume = (tweaked ? 0 : 1) * clipGain
 
             for stemID in Clip.defaultStemIDs {
                 guard let state = clip.stemStates[stemID],
@@ -545,7 +562,7 @@ class ArrangementEngine: ObservableObject {
                 else if state.isMuted { vol = 0 }
                 else if anySoloed && !state.isSoloed { vol = 0 }
                 else { vol = state.volume }
-                player.volume = vol
+                player.volume = vol * clipGain
             }
 
             if isPlaying && tweaked && !rt.stemsWereScheduled {

@@ -7,39 +7,37 @@ struct ContentView: View {
     @State private var wired = false
     @State private var uiScale: Double = 1.0
 
-    private static let minScale: Double = 0.6
+    private static let minScale: Double = 0.7
     private static let maxScale: Double = 2.0
     private static let scaleStep: Double = 0.1
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
+        ZStack {
             Color.black.opacity(0.95).ignoresSafeArea()
 
-            GeometryReader { geo in
-                Group {
-                    if !serverReady {
-                        launchingView
-                    } else {
-                        ArrangementView(engine: engine, onAddFile: addFile)
-                    }
-                }
-                .frame(width: geo.size.width / uiScale,
-                       height: geo.size.height / uiScale)
-                .scaleEffect(uiScale, anchor: .topLeading)
+            if !serverReady {
+                launchingView
+            } else {
+                ArrangementView(engine: engine, onAddFile: addFile)
             }
 
-            // Invisible buttons capture Cmd+=, Cmd+-, Cmd+0 to drive uiScale.
+            // Hidden buttons capture Cmd+=, Cmd+-, Cmd+0 to drive uiScale.
             VStack(spacing: 0) {
-                Button("") { uiScale = min(Self.maxScale, uiScale + Self.scaleStep) }
-                    .keyboardShortcut("=", modifiers: .command)
-                Button("") { uiScale = max(Self.minScale, uiScale - Self.scaleStep) }
-                    .keyboardShortcut("-", modifiers: .command)
+                Button("") {
+                    uiScale = min(Self.maxScale, uiScale + Self.scaleStep)
+                }
+                .keyboardShortcut("=", modifiers: .command)
+                Button("") {
+                    uiScale = max(Self.minScale, uiScale - Self.scaleStep)
+                }
+                .keyboardShortcut("-", modifiers: .command)
                 Button("") { uiScale = 1.0 }
                     .keyboardShortcut("0", modifiers: .command)
             }
             .frame(width: 0, height: 0)
             .opacity(0)
         }
+        .environment(\.uiScale, uiScale)
         .preferredColorScheme(.dark)
         .frame(minWidth: 720, minHeight: 440)
         .task {
